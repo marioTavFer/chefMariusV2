@@ -1,46 +1,46 @@
 # Chef Marius V2
 
-Aplicacao de receitas com IA generativa usando `Streamlit`, `LangChain` e `Groq`, com exportacao automatica de receitas em PDF e opcao de distribuicao desktop no Windows, gerando um '.exe' para ser executado em qualquer computador com windows.
+Aplicacao de receitas com IA generativa usando `Streamlit`, `LangChain` e `Groq`, com exportação automática de receitas em PDF e opção de distribuição desktop no Windows, gerando um '.exe' para ser executado em qualquer computador com windows.
 
 ## Resumo
 
-O `Chef Marius V2` permite que o usuario envie perguntas culinarias em linguagem natural e receba respostas estruturadas (ingredientes, processo e referencias). A resposta pode ser salva como PDF em disco para consulta posterior.
+O `Chef Marius V2` permite que o usuário envie perguntas culinárias em linguagem natural e receba respostas estruturadas (ingredientes, processo e referências). A resposta pode ser salva como PDF em disco para consulta posterior.
 
-A solucao tambem inclui empacotamento para executavel Windows com `PyInstaller` e inicializacao em janela desktop com `pywebview`.
+A solução também inclui empacotamento para executável Windows com `PyInstaller` e inicialização em janela desktop com `pywebview`.
 
 ## Principais capacidades
 
-- Interface simples em `Streamlit` para interacao com LLM.
-- Integracao com modelo `openai/gpt-oss-20b` via Groq.
-- Historico de conversa em sessao (`st.session_state`).
-- Geracao de PDF com `ReportLab`.
-- Persistencia local de saida em `ReceitasGravadas/`.
-- Build para distribuicao desktop sem necessidade de abrir navegador manualmente.
+- Interface simples em `Streamlit` para interação com LLM.
+- Integração com modelo `openai/gpt-oss-20b` via Groq.
+- Histórico de conversa em sessão (`st.session_state`).
+- Geração de PDF com `ReportLab`.
+- Persistência local de saída em `ReceitasGravadas/`.
+- Build para distribuição desktop sem a necessidade de abrir navegador manualmente.
 
 ## Arquitetura do projeto
 
 - `chefMariusV2.py`
-Responsavel pela interface Streamlit, chamada ao modelo, gerenciamento de historico e geracao de PDF.
+Responsável pela interface Streamlit, chamada ao modelo, gerenciamento de histórico e geração de PDF.
 
 - `launcher.py`
-Inicializa o servidor Streamlit e abre a aplicacao em janela desktop (`pywebview`), com fallback para navegador.
+Inicializa o servidor Streamlit e abre a aplicação em janela desktop (`pywebview`), com fallback para navegador.
 
 - `build_exe.py`
-Script de empacotamento com `PyInstaller` no modo `--onedir`, incluindo assets e imports necessarios.
+Script de empacotamento com `PyInstaller` no modo `--onedir`, incluindo assets e imports necessários.
 
 - `build_exe.bat`
 Atalho para build no Windows.
 
 - `ReceitasGravadas/`
-Diretorio de saida dos arquivos PDF gerados pelo app.
+Diretório de saída dos arquivos PDF gerados pelo app.
 
 ## Requisitos
 
 - Sistema operacional: Windows
 - Python: 3.10 ou superior
-- Chave de API Groq valida (ir em https://groq.com, registrar-se e criar uma groq api key grátis em https://console.groq.com/keys)
+- Chave de API Groq válida (ir em https://groq.com, registrar-se e criar uma groq api key grátis em https://console.groq.com/keys)
 
-Dependencias principais:
+Dependências principais:
 - `streamlit`
 - `langchain-core`
 - `langchain-groq`
@@ -51,7 +51,7 @@ Dependencias principais:
 - `pywebview`
 - `pyinstaller`
 
-## Instalacao
+## Instalação
 
 Na raiz do projeto (`C:\chefMariusV2`), execute:
 
@@ -59,61 +59,61 @@ Na raiz do projeto (`C:\chefMariusV2`), execute:
 pip install streamlit langchain-core langchain-groq langchain-community groq reportlab requests pywebview pyinstaller
 ```
 
-## Execucao em desenvolvimento
+## Execução em desenvolvimento
 
 ```bash
 streamlit run chefMariusV2.py
 ```
 
 Fluxo recomendado:
-1. Inicie a aplicacao.
+1. Inicie a aplicação.
 2. Informe a `GROQ API Key` na barra lateral.
-3. Digite a pergunta culinaria.
+3. Digite a pergunta culinária.
 4. Clique em `Enviar`.
 5. Consulte o PDF em `ReceitasGravadas/`.
 
-## Build para executavel Windows
+## Build para executável Windows
 
-Opcao 1:
+Opção 1:
 
 ```bat
 build_exe.bat
 ```
 
-Opcao 2:
+Opção 2:
 
 ```bash
 python build_exe.py
 ```
 
-Saida esperada no modo atual (`--onedir`):
+Saída esperada no modo atual (`--onedir`):
 - `dist/chefMariusV2/chefMariusV2.exe`
 
-Para distribuicao, copie a pasta inteira `dist/chefMariusV2/`.
+Para distribuição, copie a pasta inteira `dist/chefMariusV2/`.
 
-## Comportamento de runtime no executavel
+## Comportamento de runtime no executável
 
 - O launcher sobe o Streamlit localmente na porta configurada (padrao `8501`).
-- A aplicacao abre em janela desktop via `pywebview`.
-- Diretorios de configuracao/cache do Streamlit sao criados ao lado do `.exe`.
-- Em caso de falha no `pywebview`, ha fallback para navegador padrao.
+- A aplicação abre em janela desktop via `pywebview`.
+- Diretórios de configuração/cache do Streamlit são criados ao lado do `.exe`.
+- Em caso de falha no `pywebview`, há fallback para navegador padrão.
 
-## Persistencia de dados
+## Persistência de dados
 
-Arquivos PDF sao gerados com timestamp para evitar sobrescrita:
-- Padrao de nome: `<pergunta>_<YYYYMMDD_HHMM>.pdf`
-- Pasta de saida: `ReceitasGravadas/`
+Arquivos PDF são gerados com timestamp para evitar sobrescrita:
+- Padrão de nome: `<pergunta>_<YYYYMMDD_HHMM>.pdf`
+- Pasta de saída: `ReceitasGravadas/`
 
-## Troubleshooting rapido
+## Troubleshooting rápido
 
-- App nao responde apos iniciar:
-Verifique se a porta `8501` esta livre ou ajuste `STREAMLIT_SERVER_PORT`.
+- App não responde após iniciar:
+Verifique se a porta `8501` está livre ou ajuste `STREAMLIT_SERVER_PORT`.
 
-- Erro de autenticacao no modelo:
+- Erro de autenticação no modelo:
 Confirme se a `GROQ API Key` foi informada corretamente na interface.
 
 - Build falha no PyInstaller:
-Confirme instalacao de `pyinstaller` e execute o build na raiz do projeto.
+Confirme instalação de `pyinstaller` e execute o build na raíz do projeto.
 
-- Executavel abre e fecha imediatamente:
-Rode o `.exe` via terminal para capturar logs e validar dependencias locais.
+- Executável abre e fecha imediatamente:
+Rode o `.exe` via terminal para capturar logs e validar dependências locais.
