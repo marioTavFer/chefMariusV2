@@ -1,10 +1,10 @@
 # Chef Marius V2
 
-Aplicacao de receitas com IA generativa usando `Streamlit`, `LangChain` e `Groq`, com exportação automática de receitas em PDF e opção de distribuição desktop no Windows, gerando um '.exe' para ser executado em qualquer computador com windows.
+Aplicação de geração de receitas com IA generativa usando `Streamlit`, `LangChain` e `Groq`, com exportação automática de receitas em PDF e opção de distribuição desktop no Windows, gerando um '.exe', para ser executado em qualquer computador com windows.
 
 ## Resumo
 
-O `Chef Marius V2` permite que o usuário envie perguntas culinárias em linguagem natural e receba respostas estruturadas (ingredientes, processo e referências). A resposta pode ser salva como PDF em disco para consulta posterior.
+O `Chef Marius V2` permite que o usuário envie perguntas culinárias em linguagem natural e receba respostas estruturadas (ingredientes, processo e referências). A resposta é salva como PDF em disco para consulta posterior.
 
 A solução também inclui empacotamento para executável Windows com `PyInstaller` e inicialização em janela desktop com `pywebview`.
 
@@ -15,7 +15,7 @@ A solução também inclui empacotamento para executável Windows com `PyInstall
 - Histórico de conversa em sessão (`st.session_state`).
 - Geração de PDF com `ReportLab`.
 - Persistência local de saída em `ReceitasGravadas/`.
-- Build para distribuição desktop sem a necessidade de abrir navegador manualmente.
+- Build para distribuição desktop e sem a necessidade de abrir navegador manualmente.
 
 ## Arquitetura do projeto
 
