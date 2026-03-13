@@ -19,6 +19,7 @@ from datetime import datetime
 import streamlit as st
 
 # ReportLab
+
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfbase import pdfmetrics
@@ -32,6 +33,7 @@ from reportlab.lib import colors
 
 # LangChain
 # criação de prompts
+
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 # mensagens usadas no contexto da conversa
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -42,6 +44,7 @@ from langchain_community.callbacks.streamlit import StreamlitCallbackHandler
 
 # avoid warnings and loggers from Streamlit
 # Suprimir warnings inofensivos e loggers do Streamlit
+
 warnings.filterwarnings("ignore", message=".*missing ScriptRunContext.*")
 logging.getLogger('streamlit.runtime.scriptrunner_utils.script_run_context').setLevel(logging.ERROR)
 logging.getLogger('streamlit').setLevel(logging.ERROR)
@@ -49,6 +52,7 @@ logging.getLogger('streamlit').setLevel(logging.ERROR)
 # create local files and it is ready to work with pyinstaller to deploy anywhere (with .exe)
 # cria pasta para arquivos locais salvos
 # Funciona tanto com .py quanto com .exe (PyInstaller)
+
 if getattr(sys, 'frozen', False):
     # Executando como .exe (PyInstaller)
     # _MEIPASS é para recursos read-only (fonts, assets)
@@ -61,6 +65,7 @@ else:
     exe_dir = base_dir
 
 # SAVE_DIR usa exe_dir para que os arquivos persistam após fechar o app
+
 SAVE_DIR = os.path.join(exe_dir, "ReceitasGravadas")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
@@ -69,9 +74,11 @@ timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
 
 # Define as configurações iniciais da página do Streamlit (título, ícone e layout)
+
 st.set_page_config(page_title = "Receitas", page_icon = "🍷", layout = "wide")
 
 # Cria a barra lateral do app com elementos de configuração
+
 with st.sidebar:
     st.header("Config")
     api_key = st.text_input("Digite sua GROQ API Key e Enter", type = "password")
@@ -81,11 +88,13 @@ with st.sidebar:
 
 # emogi: https://getemoji.com/#activities
 # Show Titles / Exibe os títulos principais e subtítulo do app
+
 st.title("Test-drive de receitas com IA V2.0.MLTF")
 st.title("👩🏼‍🍳 Chef Marius's Recipes")
 
-# shows the defined model
-# Exibe o modelo utilizado
+# Groq + LangChain - LLM para Consultoria
+# shows the defined model - # Exibe o modelo utilizado
+
 st.caption("Modelo: openai/gpt-oss-20b via Groq + LangChain")
 
 # minha api_key para testes
@@ -93,14 +102,17 @@ st.caption("Modelo: openai/gpt-oss-20b via Groq + LangChain")
 
 # check if API_KEY from Groq is available
 # Verifica se a chave de API foi informada; se não, interrompe a execução
+
 if not api_key:
     st.warning("Informe a GROQ API Key na barra lateral para começar.")
     st.stop()
 
 # Armazena a chave informada na variável de ambiente para uso pela API Groq
+
 os.environ["GROQ_API_KEY"] = api_key
 
 # Inicializa o modelo de linguagem via ChatGroq com parâmetros de temperatura e limite de tokens
+
 dsa_llm = ChatGroq(model = "openai/gpt-oss-20b", temperature = 0.2, max_tokens = 1024)
 
 # Define o prompt base com orientações de escrita, apresentação e referências.
@@ -113,6 +125,7 @@ system_block2 = """ You are a professional cook who writes objectively and clear
 Verify the information by consulting various sources, presenting at least 5 references. Structure the answer with: a table of ingredients, a table of the processes to be executed with a description of the process, quantities, and time. """
 
 # Cria o template de prompt para conversas, incluindo o bloco de sistema e o histórico
+
 dsa_prompt = ChatPromptTemplate.from_messages(
     [
         # Define a mensagem de sistema com as instruções do assistente
@@ -126,13 +139,84 @@ dsa_prompt = ChatPromptTemplate.from_messages(
     ]
 )
 
+# ReportLab - create the pdf of the recipe/grava arquivo PDF da receita
+    # function to generate a pdf with the cooking recipe or other docs with tables
+
+def cria_pdf (pdf_path, content):
+    try:
+        # Create PDF with the response
+        doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=36, bottomMargin=36, leftMargin=72, rightMargin=72)
+        styles = getSampleStyleSheet()
+        story = []
+
+        story.append(Paragraph("Arquivo do Chef Consultor - IA", styles['Heading2']))
+        story.append(Spacer(1, 6))
+
+        # Parse content for multiple tables and text
+        lines = content.split('\n')
+        i = 0
+        while i < len(lines):
+            # Collect text until table
+            text_lines = []
+            while i < len(lines) and not lines[i].strip().startswith('|'):
+                text_lines.append(lines[i])
+                i += 1
+            if text_lines:
+                text = '\n'.join(text_lines).strip()
+                if text:
+                    text_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
+                    text_html = text_html.replace('\n', '<br/>')
+                    story.append(Paragraph(text_html, styles['Normal']))
+                    story.append(Spacer(1, 6))
+
+            if i < len(lines) and lines[i].strip().startswith('|'):
+                # Parse table
+                header = [Paragraph(re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', cell.strip()), styles['Normal']) for cell in lines[i].split('|')[1:-1]]
+                i += 1
+                # Skip separator if present
+                if i < len(lines) and all('---' in cell for cell in lines[i].split('|')[1:-1]):
+                    i += 1
+                rows = []
+                while i < len(lines) and lines[i].strip().startswith('|'):
+                    cells = [re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', cell.strip()) for cell in lines[i].split('|')[1:-1]]
+                    if len(cells) == len(header):
+                        rows.append(cells)
+                    i += 1
+                if rows:
+                    data = [header] + [[Paragraph(cell, styles['Normal']) for cell in row] for row in rows]
+                    table = Table(data, colWidths=[100, 200, 150])
+                    table.setStyle(TableStyle([
+                        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+                        ('TEXTCOLOR', (0,0), (-1,0), colors.black),
+                        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+                        ('FONTSIZE', (0,0), (-1,0), 10),
+                        ('BOTTOMPADDING', (0,0), (-1,0), 6),
+                        ('BACKGROUND', (0,1), (-1,-1), colors.white),
+                        ('GRID', (0,0), (-1,-1), 1, colors.black),
+                        ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                        ('FONTSIZE', (0, 1), (-1, -1), 8),
+                        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+                        ('LEFTPADDING', (0,0), (-1,-1), 3),
+                        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+                    ]))
+                    story.append(table)
+                    story.append(Spacer(1, 6))
+        doc.build(story)
+        st.info(f"Consulta gravada em: `{SAVE_DIR}`")
+    except Exception as e:
+        print(f"Error creating PDF: {e}") 
+
+# Streamlit - Formulário de Pergunta e Processamento da Resposta
 # start historical data from conversation
 # Inicializa o histórico da conversa, caso ainda não exista na sessão
+
 if "history" not in st.session_state:
     st.session_state.history = []
 
 # form to send the question
 # Streamlit - Cria um formulário para envio da pergunta
+
 with st.form("form"):
     
     # Campo de texto para digitar a pergunta 
@@ -142,6 +226,7 @@ with st.form("form"):
     enviado = st.form_submit_button("Enviar")
 
 # Executa o processamento quando o botão "Enviar" for clicado
+
 if enviado:
     
     # generate messages with log data. Gera as mensagens com base no histórico e na nova pergunta
@@ -171,73 +256,6 @@ if enviado:
     else:
         pergunta_lim = pergunta
         
-    # ReportLab - create the pdf of the recipe/grava arquivo PDF da receita
-    # function to generate a pdf with the cooking recipe or other docs with tables
-    def cria_pdf (pdf_path, content):
-        try:
-           # Create PDF with the response
-            doc = SimpleDocTemplate(pdf_path, pagesize=A4, topMargin=36, bottomMargin=36, leftMargin=72, rightMargin=72)
-            styles = getSampleStyleSheet()
-            story = []
-
-            story.append(Paragraph("Arquivo do Chef Marius - IA", styles['Heading2']))
-            story.append(Spacer(1, 6))
-
-            # Parse content for multiple tables and text
-            lines = content.split('\n')
-            i = 0
-            while i < len(lines):
-                # Collect text until table
-                text_lines = []
-                while i < len(lines) and not lines[i].strip().startswith('|'):
-                    text_lines.append(lines[i])
-                    i += 1
-                if text_lines:
-                    text = '\n'.join(text_lines).strip()
-                    if text:
-                        text_html = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', text)
-                        text_html = text_html.replace('\n', '<br/>')
-                        story.append(Paragraph(text_html, styles['Normal']))
-                        story.append(Spacer(1, 6))
-    
-                if i < len(lines) and lines[i].strip().startswith('|'):
-                    # Parse table
-                    header = [Paragraph(re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', cell.strip()), styles['Normal']) for cell in lines[i].split('|')[1:-1]]
-                    i += 1
-                    # Skip separator if present
-                    if i < len(lines) and all('---' in cell for cell in lines[i].split('|')[1:-1]):
-                        i += 1
-                    rows = []
-                    while i < len(lines) and lines[i].strip().startswith('|'):
-                        cells = [re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', cell.strip()) for cell in lines[i].split('|')[1:-1]]
-                        if len(cells) == len(header):
-                            rows.append(cells)
-                        i += 1
-                    if rows:
-                        data = [header] + [[Paragraph(cell, styles['Normal']) for cell in row] for row in rows]
-                        table = Table(data, colWidths=[100, 200, 150])
-                        table.setStyle(TableStyle([
-                            ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-                            ('TEXTCOLOR', (0,0), (-1,0), colors.black),
-                            ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-                            ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-                            ('FONTSIZE', (0,0), (-1,0), 10),
-                            ('BOTTOMPADDING', (0,0), (-1,0), 6),
-                            ('BACKGROUND', (0,1), (-1,-1), colors.white),
-                            ('GRID', (0,0), (-1,-1), 1, colors.black),
-                            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                            ('FONTSIZE', (0, 1), (-1, -1), 8),
-                            ('VALIGN', (0,0), (-1,-1), 'TOP'),
-                            ('LEFTPADDING', (0,0), (-1,-1), 3),
-                            ('RIGHTPADDING', (0,0), (-1,-1), 3),
-                        ]))
-                        story.append(table)
-                        story.append(Spacer(1, 6))
-            doc.build(story)
-            st.info(f"Receita gravada em: `{SAVE_DIR}`")
-        except Exception as e:
-            print(f"Error creating PDF: {e}") 
-
     content = resp.content
     pdf_path = os.path.join(SAVE_DIR, f"{pergunta_lim}_{timestamp}.pdf")
     cria_pdf (pdf_path, content)
